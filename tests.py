@@ -5,28 +5,14 @@ import requests
 from conftest import create_courier
 
 
+url = 'https://qa-scooter.praktikum-services.ru'
+
+
 class TestCreatingCourier:
     @allure.title('Проверка, что курьера можно создать')
-    def test_courier_creation_successful(self):
-        # создание курьера
-        new_courier = {
-            "login": "cat33",
-            "password": "112233",
-            "firstName": "cat33"
-        }
-        response = requests.post('https://qa-scooter.praktikum-services.ru/api/v1/courier/',
-                                 data=new_courier)
-        assert response.status_code == 201 and response.text == '{"ok":true}'
-        # вход под курьером для получения его id
-        courier_log_pass = {
-            "login": new_courier['login'],
-            "password": new_courier['password']
-        }
-        response = requests.post('https://qa-scooter.praktikum-services.ru/api/v1/courier/login/',
-                                 data=courier_log_pass)
-        courier_id = response.json()['id']
-        # удаление курьера
-        requests.delete(f'https://qa-scooter.praktikum-services.ru/api/v1/courier/{courier_id}')
+    def test_courier_creation_successful(self, create_courier_response):
+        new_courier = create_courier_response
+        assert new_courier.status_code == 201 and new_courier.text == '{"ok":true}'
 
     @allure.title('Проверка, что нельзя создать двух одинаковых курьеров')
     def test_cannot_create_two_identical_couriers(self, create_courier):
@@ -36,7 +22,7 @@ class TestCreatingCourier:
             "password": new_courier[1],
             "firstName": new_courier[2]
         }
-        response = requests.post('https://qa-scooter.praktikum-services.ru/api/v1/courier/',
+        response = requests.post(f'{url}/api/v1/courier/',
                                  data=create_second_courier)
         assert response.status_code == 409 and response.text == '{"message": "Этот логин уже используется"}'
 
@@ -48,7 +34,7 @@ class TestCreatingCourier:
             "password": password,
             "firstName": first_name
         }
-        response = requests.post('https://qa-scooter.praktikum-services.ru/api/v1/courier/',
+        response = requests.post(f'{url}/api/v1/courier/',
                                  data=courier_without_log_or_pass)
         assert (response.status_code == 400 and
                 response.text == '{"message": "Недостаточно данных для создания учетной записи"}')
@@ -61,32 +47,22 @@ class TestCreatingCourier:
             "password": "123123",
             "firstName": "Roma"
         }
-        response = requests.post('https://qa-scooter.praktikum-services.ru/api/v1/courier/',
+        response = requests.post(f'{url}/api/v1/courier/',
                                  data=create_second_courier)
         assert response.status_code == 409 and response.text == '{"message": "Этот логин уже используется"}'
 
 
 class TestLoginCourier:
     @allure.title('Успешная авторизация курьера в системе')
-    def test_successful_courier_authorization(self):
-        # создание курьера
-        new_courier = {
-            "login": "cat34",
-            "password": "112233",
-            "firstName": "cat34"
-        }
-        requests.post('https://qa-scooter.praktikum-services.ru/api/v1/courier/', data=new_courier)
-        # проверка успешной авторизации
+    def test_successful_courier_authorization(self, create_courier):
+        new_courier = create_courier
         courier_log_pass = {
-            "login": new_courier['login'],
-            "password": new_courier['password']
+            "login": new_courier[0],
+            "password": new_courier[1]
         }
-        response = requests.post('https://qa-scooter.praktikum-services.ru/api/v1/courier/login/',
-                                 data=courier_log_pass)
+        response = requests.post(f'{url}/api/v1/courier/login/', data=courier_log_pass)
         courier_id = response.json()['id']
-        assert response.status_code == 200 and response.text == f'{{"id":{courier_id}}}'
-        # удаление курьера
-        requests.delete(f'https://qa-scooter.praktikum-services.ru/api/v1/courier/{courier_id}')
+        assert response.status_code == 200 and response.text == f'{{id: {courier_id}}}'
 
     @allure.title('Авторизация курьера с неверным логином')
     def test_authorization_with_incorrect_login(self, create_courier):
@@ -96,7 +72,7 @@ class TestLoginCourier:
             "password": new_courier[1],
             "firstName": new_courier[2]
         }
-        response = requests.post('https://qa-scooter.praktikum-services.ru/api/v1/courier/login',
+        response = requests.post(f'{url}/api/v1/courier/login',
                                  data=courier_with_incorrect_log)
         assert response.status_code == 404 and response.text == {"message": "Учетная запись не найдена"}
 
@@ -108,7 +84,7 @@ class TestLoginCourier:
             "password": "112233",
             "firstName": new_courier[2]
         }
-        response = requests.post('https://qa-scooter.praktikum-services.ru/api/v1/courier/login',
+        response = requests.post(f'{url}/api/v1/courier/login',
                                  data=courier_with_incorrect_pass)
         assert response.status_code == 404 and response.text == {"message": "Учетная запись не найдена"}
 
@@ -120,7 +96,7 @@ class TestLoginCourier:
             "password": new_courier[1],
             "firstName": new_courier[2]
         }
-        response = requests.post('https://qa-scooter.praktikum-services.ru/api/v1/courier/login',
+        response = requests.post(f'{url}/api/v1/courier/login',
                                  data=courier_without_log)
         assert response.status_code == 400 and response.text == {"message":  "Недостаточно данных для входа"}
 
@@ -132,7 +108,7 @@ class TestLoginCourier:
             "password": "",
             "firstName": new_courier[2]
         }
-        response = requests.post('https://qa-scooter.praktikum-services.ru/api/v1/courier/login',
+        response = requests.post(f'{url}/api/v1/courier/login',
                                  data=courier_without_pass)
         assert response.status_code == 400 and response.text == {"message":  "Недостаточно данных для входа"}
 
@@ -153,7 +129,7 @@ class TestCreatingOrder:
             "color": [color]
         }
         create_order_string = json.dumps(create_order)
-        response = requests.post('https://qa-scooter.praktikum-services.ru/api/v1/orders', data=create_order_string)
+        response = requests.post(f'{url}/api/v1/orders', data=create_order_string)
         track_id = response.json()['track']
         assert response.status_code == 201 and response.text == f'{{track: {track_id}}}'
 
@@ -161,5 +137,5 @@ class TestCreatingOrder:
 class TestOrderList:
     @allure.title('Получение списка заказов без courierId')
     def test_get_list_of_order_without_courier_id(self):
-        response = requests.get('https://qa-scooter.praktikum-services.ru/api/v1/orders')
+        response = requests.get(f'{url}/api/v1/orders')
         assert response.status_code == 200 and len(response.text) > 0
